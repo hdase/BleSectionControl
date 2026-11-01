@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#1b1f24">
+<title>Section Remote</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<style>
+  :root {
+    --bg: #1b1f24; --panel: #262b32; --text: #eef1f4; --muted: #8b95a1;
+    --ok: #2ea043; --warn: #d29922; --bad: #da3633; --btn: #33404d; --btn-on: #3d7a3d; --btn-off: #8a3a3a;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; user-select: none; -webkit-user-select: none; }
+  body { display: flex; flex-direction: column; padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom); }
+  header { display: flex; align-items: center; justify-content: space-between; padding: 14px 0 10px; }
+  h1 { font-size: 18px; margin: 0; font-weight: 600; }
+  #connectBtn { background: #1f6feb; color: #fff; border: 0; border-radius: 10px; padding: 10px 16px; font-size: 15px; font-weight: 600; }
+  #connectBtn.disconnect { background: var(--btn); }
+  .status { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+  .st { background: var(--panel); border-radius: 10px; padding: 10px 8px; text-align: center; font-size: 12px; color: var(--muted); }
+  .st b { display: block; font-size: 13px; color: var(--text); margin-top: 4px; }
+  .dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: var(--bad); vertical-align: middle; }
+  .dot.ok { background: var(--ok); } .dot.warn { background: var(--warn); }
+  #banner { border-radius: 10px; padding: 12px; font-size: 14px; font-weight: 600; text-align: center; margin-bottom: 14px; background: var(--bad); }
+  #banner.ok { background: var(--ok); } #banner.warn { background: var(--warn); color: #111; }
+  .grid { flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 14px; padding-bottom: 16px; min-height: 0; }
+  .side { grid-row: 1; text-align: center; font-size: 12px; color: var(--muted); }
+  button.aux { border: 0; border-radius: 18px; background: var(--btn); color: var(--text); display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 8px; font-size: 14px; touch-action: none; position: relative; min-height: 120px; }
+  button.aux svg { width: 64%; max-width: 120px; height: auto; }
+  button.aux.on  { box-shadow: inset 0 -6px 0 var(--btn-on); }
+  button.aux.off { box-shadow: inset 0 -6px 0 var(--btn-off); }
+  button.aux.pressed { background: #4c6178; transform: scale(0.97); }
+  button.aux:disabled { opacity: .35; }
+  button.aux .unassigned { position: absolute; top: 8px; right: 10px; font-size: 11px; color: var(--warn); }
+  #log { font-size: 11px; color: var(--muted); min-height: 16px; padding-bottom: 8px; text-align: center; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Section Remote</h1>
+  <button id="connectBtn">Verbinden</button>
+</header>
+
+<div class="status">
+  <div class="st"><span class="dot" id="dBle"></span><b>Bluetooth</b><span id="tBle">getrennt</span></div>
+  <div class="st"><span class="dot" id="dBus"></span><b>ISOBUS</b><span id="tBus">–</span></div>
+  <div class="st"><span class="dot" id="dAux"></span><b>AUX-N</b><span id="tAux">–</span></div>
+</div>
+<div id="banner">Nicht verbunden</div>
+
+<div class="grid">
+  <!-- Links: linke Seite der Maschine, rechts: rechte Seite -->
+  <button class="aux on"  data-bit="0" disabled aria-label="Section nach links einschalten">
+    <svg viewBox="0 0 100 60"><g stroke="currentColor" stroke-width="7" stroke-linecap="round" fill="none">
+      <path d="M62 30h28M76 16v28"/><path d="M48 30H10M24 16 10 30l14 14"/></g></svg>
+    <span>Links EIN</span><span class="unassigned" hidden>nicht zugeordnet</span>
+  </button>
+  <button class="aux on"  data-bit="2" disabled aria-label="Section nach rechts einschalten">
+    <svg viewBox="0 0 100 60"><g stroke="currentColor" stroke-width="7" stroke-linecap="round" fill="none">
+      <path d="M10 30h28M24 16v28"/><path d="M52 30h38M76 16l14 14-14 14"/></g></svg>
+    <span>Rechts EIN</span><span class="unassigned" hidden>nicht zugeordnet</span>
+  </button>
+  <button class="aux off" data-bit="1" disabled aria-label="Section von links ausschalten">
+    <svg viewBox="0 0 100 60"><g stroke="currentColor" stroke-width="7" stroke-linecap="round" fill="none">
+      <path d="M10 30h28"/><path d="M52 30h38M76 16l14 14-14 14"/></g></svg>
+    <span>Links AUS</span><span class="unassigned" hidden>nicht zugeordnet</span>
+  </button>
+  <button class="aux off" data-bit="3" disabled aria-label="Section von rechts ausschalten">
+    <svg viewBox="0 0 100 60"><g stroke="currentColor" stroke-width="7" stroke-linecap="round" fill="none">
+      <path d="M62 30h28"/><path d="M48 30H10M24 16 10 30l14 14"/></g></svg>
+    <span>Rechts AUS</span><span class="unassigned" hidden>nicht zugeordnet</span>
+  </button>
+</div>
+<div id="log"></div>
+
+<script>
+/* ---------- BLE-Schnittstelle (muss zur ESP32-Firmware passen, siehe BLE-Schnittstelle.md) ---------- */
+const SERVICE_UUID = '71c6dc5d-59ec-4fef-9c03-0d0158819677';
+const BUTTONS_UUID = '98237ea2-4a3b-4189-a640-d2be777a7181'; // Handy -> ESP32, write without response
+const STATUS_UUID  = '3563e9a6-eb47-4bba-af5c-49ec13e3936e'; // ESP32 -> Handy, notify + read
+const DEVICE_NAME_PREFIX = 'SectionRemote';
+
+const TX_INTERVAL_MS     = 100;   // Heartbeat/Button-Zustand ans ESP32
+const STATUS_TIMEOUT_MS  = 1500;  // kein Status vom ESP32 -> Verbindung als gestört anzeigen
+const MIN_PRESS_MS       = 200;   // kurzer Tipp wird mindestens so lange als "gedrückt" gesendet
+
+// Status-Byte 0 (Flags)
+const F_ADDR_CLAIMED = 0x01, F_VT_CONNECTED = 0x02, F_POOL_ACTIVE = 0x04, F_LEARN_MODE = 0x08;
+
+const DEMO = new URLSearchParams(location.search).has('demo');
+
+let device = null, btnChar = null, statusChar = null;
+let pressedMask = 0, seq = 0, txTimer = null, lastStatusAt = 0, status = null, userDisconnect = false;
+const pressStart = {};
+
+const $ = id => document.getElementById(id);
+const buttons = [...document.querySelectorAll('button.aux')];
+const log = msg => { $('log').textContent = msg; };
+
+/* ---------- Verbindung ---------- */
+async function connect() {
+  if (DEMO) return startDemo();
+  if (!navigator.bluetooth) { log('Web Bluetooth nicht verfügbar – Chrome auf Android und HTTPS nötig.'); return; }
+  try {
+    userDisconnect = false;
+    device = await navigator.bluetooth.requestDevice({
+      filters: [{ namePrefix: DEVICE_NAME_PREFIX }, { services: [SERVICE_UUID] }],
+      optionalServices: [SERVICE_UUID]
+    });
+    device.addEventListener('gattserverdisconnected', onDisconnected);
+    await openGatt();
+  } catch (e) { log(e.message); render(); }
+}
+
+async function openGatt() {
+  setBle('warn', 'verbinde…');
+  const server = await device.gatt.connect();
+  const svc = await server.getPrimaryService(SERVICE_UUID);
+  btnChar = await svc.getCharacteristic(BUTTONS_UUID);
+  statusChar = await svc.getCharacteristic(STATUS_UUID);
+  statusChar.addEventListener('characteristicvaluechanged', e => onStatus(e.target.value));
+  await statusChar.startNotifications();
+  onStatus(await statusChar.readValue());
+  startTx();
+  log('Verbunden mit ' + device.name);
+  requestWakeLock();
+}
+
+async function onDisconnected() {
+  stopTx(); btnChar = statusChar = null; status = null; render();
+  if (userDisconnect || !device) return;
+  // automatisch neu verbinden, solange die Seite offen ist
+  for (let i = 1; i <= 20 && !userDisconnect; i++) {
+    log(`Verbindung verloren – Neuversuch ${i} …`);
+    try { await openGatt(); return; } catch { await new Promise(r => setTimeout(r, Math.min(500 * i, 3000))); }
+  }
+  log('Neu verbinden fehlgeschlagen – bitte „Verbinden“ tippen.');
+}
+
+function disconnect() {
+  userDisconnect = true; releaseAll();
+  if (DEMO) { stopDemo(); return; }
+  if (device?.gatt.connected) device.gatt.disconnect();
+}
+
+/* ---------- Senden: Bitmaske + Sequenzzähler alle 100 ms ---------- */
+function startTx() { stopTx(); txTimer = setInterval(sendState, TX_INTERVAL_MS); sendState(); }
+function stopTx() { clearInterval(txTimer); txTimer = null; }
+let writing = false;
+async function sendState() {
+  if (Date.now() - lastStatusAt > STATUS_TIMEOUT_MS) render();
+  if (!btnChar || writing) return;
+  seq = (seq + 1) & 0xff;
+  writing = true;
+  try { await btnChar.writeValueWithoutResponse(new Uint8Array([pressedMask, seq])); }
+  catch (e) { /* Verbindungsabbruch wird über gattserverdisconnected behandelt */ }
+  finally { writing = false; }
+}
+
+/* ---------- Status vom ESP32 ---------- */
+function onStatus(dv) {
+  lastStatusAt = Date.now();
+  status = { flags: dv.getUint8(0), assigned: dv.byteLength > 1 ? dv.getUint8(1) : 0x0f };
+  render();
+}
+
+function setBle(cls, txt) { $('dBle').className = 'dot ' + cls; $('tBle').textContent = txt; }
+
+function render() {
+  const bleUp = DEMO ? !!txTimer : !!(device?.gatt.connected && btnChar);
+  const fresh = Date.now() - lastStatusAt < STATUS_TIMEOUT_MS;
+  const f = (status && fresh) ? status.flags : 0;
+
+  setBle(bleUp ? (fresh ? 'ok' : 'warn') : '', bleUp ? (fresh ? 'verbunden' : 'keine Daten') : 'getrennt');
+
+  const busOk = bleUp && fresh && (f & F_ADDR_CLAIMED) && (f & F_VT_CONNECTED);
+  $('dBus').className = 'dot ' + (busOk ? 'ok' : (bleUp && fresh && (f & F_ADDR_CLAIMED) ? 'warn' : ''));
+  $('tBus').textContent = !bleUp || !fresh ? '–' : !(f & F_ADDR_CLAIMED) ? 'keine Adresse' : !(f & F_VT_CONNECTED) ? 'kein Terminal' : 'Terminal OK';
+
+  const learn = f & F_LEARN_MODE;
+  const auxOk = busOk && (f & F_POOL_ACTIVE);
+  $('dAux').className = 'dot ' + (auxOk ? (learn ? 'warn' : 'ok') : '');
+  $('tAux').textContent = !busOk ? '–' : !(f & F_POOL_ACTIVE) ? 'Pool lädt…' : learn ? 'Lernmodus' : 'aktiv';
+
+  const ready = auxOk;
+  const banner = $('banner');
+  banner.className = ready ? (learn ? 'warn' : 'ok') : (bleUp ? 'warn' : '');
+  banner.textContent = !bleUp ? 'Nicht verbunden' : !fresh ? 'ESP32 antwortet nicht' : !busOk ? 'ISOBUS nicht bereit'
+    : !(f & F_POOL_ACTIVE) ? 'AUX-N wird angemeldet…' : learn ? 'Terminal im Zuordnungsmodus – Taste drücken zum Zuordnen' : 'Bereit';
+
+  buttons.forEach(b => {
+    const bit = +b.dataset.bit;
+    b.disabled = !ready;
+    b.querySelector('.unassigned').hidden = !ready || learn || ((status?.assigned ?? 0x0f) >> bit & 1);
+  });
+  if (!ready) releaseAll();
+
+  const cb = $('connectBtn');
+  cb.textContent = bleUp ? 'Trennen' : 'Verbinden';
+  cb.classList.toggle('disconnect', bleUp);
+}
+
+/* ---------- Bedienung ---------- */
+function press(b) {
+  if (b.disabled) return;
+  const bit = +b.dataset.bit;
+  pressedMask |= (1 << bit); pressStart[bit] = Date.now();
+  b.classList.add('pressed');
+  navigator.vibrate?.(30);
+  sendState();
+}
+function release(b) {
+  const bit = +b.dataset.bit;
+  if (!(pressedMask >> bit & 1)) return;
+  const remaining = MIN_PRESS_MS - (Date.now() - pressStart[bit]);
+  const done = () => { pressedMask &= ~(1 << bit); b.classList.remove('pressed'); sendState(); };
+  remaining > 0 ? setTimeout(done, remaining) : done();
+}
+function releaseAll() { pressedMask = 0; buttons.forEach(b => b.classList.remove('pressed')); }
+
+buttons.forEach(b => {
+  b.addEventListener('pointerdown', e => { e.preventDefault(); b.setPointerCapture(e.pointerId); press(b); });
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => b.addEventListener(ev, () => release(b)));
+  b.addEventListener('contextmenu', e => e.preventDefault());
+});
+$('connectBtn').addEventListener('click', () => (txTimer ? disconnect() : connect()));
+document.addEventListener('visibilitychange', () => { if (document.hidden) releaseAll(); else requestWakeLock(); });
+setInterval(render, 500);
+
+/* ---------- Bildschirm anlassen ---------- */
+let wakeLock = null;
+async function requestWakeLock() { try { if (!wakeLock || wakeLock.released) wakeLock = await navigator.wakeLock?.request('screen'); } catch {} }
+
+/* ---------- Demo-Modus (?demo) zum Testen ohne Hardware ---------- */
+let demoTimer = null, demoT = 0;
+function startDemo() {
+  log('Demo-Modus – keine echte Verbindung');
+  startTxDemo();
+}
+function startTxDemo() {
+  txTimer = setInterval(() => {}, 1000);
+  demoTimer = setInterval(() => {
+    demoT++;
+    const flags = (demoT > 2 ? F_ADDR_CLAIMED : 0) | (demoT > 4 ? F_VT_CONNECTED : 0) | (demoT > 6 ? F_POOL_ACTIVE : 0);
+    onStatus(new DataView(new Uint8Array([flags, 0b1011]).buffer));
+  }, 400);
+}
+function stopDemo() { clearInterval(demoTimer); stopTx(); demoT = 0; status = null; lastStatusAt = 0; render(); }
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+render();
+</script>
+</body>
+</html>
