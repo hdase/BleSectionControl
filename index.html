@@ -39,13 +39,41 @@
   button.aux.main { grid-column: 1 / -1; flex-direction: row; gap: 14px; min-height: 96px; box-shadow: inset 0 -6px 0 #1f6feb; }
   button.aux.main svg { width: auto; height: 60%; max-height: 64px; }
   button.aux .unassigned { position: absolute; top: 8px; right: 10px; font-size: 11px; color: var(--warn); }
+  #fwBtn { background: var(--btn); color: var(--text); border: 0; border-radius: 10px; padding: 8px 10px; margin-right: 8px; display: inline-flex; align-items: center; }
+  #fwBtn svg { width: 20px; height: 20px; }
+  #fwBtn:disabled { opacity: .35; }
+  #fwPanel { position: fixed; inset: 0; background: var(--bg); z-index: 10; overflow-y: auto;
+    padding: calc(env(safe-area-inset-top) + 14px) 16px calc(env(safe-area-inset-bottom) + 16px); user-select: text; -webkit-user-select: text; }
+  #fwPanel[hidden] { display: none; }
+  #fwPanel h2 { font-size: 18px; margin: 0; }
+  #fwPanel h3 { font-size: 14px; margin: 0 0 8px; color: var(--muted); font-weight: 600; }
+  .fwhead { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .card { background: var(--panel); border-radius: 12px; padding: 14px; margin-bottom: 12px; font-size: 14px; }
+  .card[hidden] { display: none; }
+  .row { display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+  .card input[type=password], .card input[type=text] { flex: 1; min-width: 0; background: var(--bg); color: var(--text); border: 1px solid #3a4450;
+    border-radius: 8px; padding: 10px; font-size: 16px; letter-spacing: 2px; }
+  .card input[type=file] { width: 100%; color: var(--muted); font-size: 14px; }
+  .pbtn { background: #1f6feb; color: #fff; border: 0; border-radius: 10px; padding: 10px 14px; font-size: 15px; font-weight: 600; }
+  .pbtn.grey { background: var(--btn); } .pbtn.red { background: var(--bad); }
+  .pbtn:disabled { opacity: .4; }
+  .kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 13px; }
+  .kv span:nth-child(odd) { color: var(--muted); }
+  .msg { margin-top: 8px; font-size: 13px; min-height: 18px; }
+  .msg.err { color: #ff7b72; } .msg.ok { color: #56d364; } .msg.warn { color: var(--warn); }
+  progress { width: 100%; height: 18px; accent-color: #1f6feb; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
   #log { font-size: 11px; color: var(--muted); min-height: 16px; padding-bottom: 8px; text-align: center; }
 </style>
 </head>
 <body>
 <header>
   <h1>Section Remote</h1>
-  <button id="connectBtn">Verbinden</button>
+  <div>
+    <button id="fwBtn" disabled aria-label="Firmware-Update"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <path d="M12 3v12M7 10l5 5 5-5M4 20h16"/></svg></button>
+    <button id="connectBtn">Verbinden</button>
+  </div>
 </header>
 
 <div class="status">
@@ -84,6 +112,47 @@
   </button>
 </div>
 <div id="log"></div>
+
+<section id="fwPanel" hidden>
+  <div class="fwhead"><h2>Firmware-Update</h2><button class="pbtn grey" id="fwClose">Schließen</button></div>
+
+  <div class="card">
+    <div class="kv">
+      <span>Gerät</span><span id="fwDev">–</span>
+      <span>Firmware</span><span id="fwVer">–</span>
+      <span>Zustand</span><span id="fwState">–</span>
+    </div>
+  </div>
+
+  <div class="card" id="cardAuth">
+    <h3>Anmelden</h3>
+    <div class="row"><input type="password" id="pinIn" inputmode="numeric" maxlength="8" placeholder="PIN" autocomplete="off">
+      <button class="pbtn" id="authBtn">Anmelden</button></div>
+    <div class="hint">Nach dem Flashen per USB gilt die PIN 0000. Sie muss vor dem ersten Update geändert werden.</div>
+    <div class="msg" id="authMsg"></div>
+  </div>
+
+  <div class="card" id="cardPin" hidden>
+    <h3 id="pinTitle">PIN ändern</h3>
+    <div class="row"><input type="password" id="pinNew1" inputmode="numeric" maxlength="8" placeholder="neue PIN (4–8 Ziffern)" autocomplete="off"></div>
+    <div class="row"><input type="password" id="pinNew2" inputmode="numeric" maxlength="8" placeholder="neue PIN wiederholen" autocomplete="off">
+      <button class="pbtn" id="pinBtn">Speichern</button></div>
+    <div class="msg" id="pinMsg"></div>
+  </div>
+
+  <div class="card" id="cardUpdate" hidden>
+    <h3>Neue Firmware</h3>
+    <input type="file" id="fileIn" accept=".bin,application/octet-stream">
+    <div class="kv" id="fileInfo" style="margin-top:8px"></div>
+    <div class="hint">Datei <b>SectionRemote.bin</b> aus dem Build verwenden (nicht die „merged“-Datei für USB).
+      Während des Updates meldet sich das Gerät vom ISOBUS ab – nicht während der Arbeit durchführen. App im Vordergrund lassen.</div>
+    <div class="row"><button class="pbtn" id="startBtn" disabled>Update starten</button>
+      <button class="pbtn red" id="abortBtn" hidden>Abbrechen</button></div>
+    <div id="progWrap" hidden style="margin-top:10px"><progress id="prog" max="100" value="0"></progress>
+      <div class="hint" id="progTxt"></div></div>
+    <div class="msg" id="updMsg"></div>
+  </div>
+</section>
 
 <script>
 /* ---------- BLE-Schnittstelle (muss zur ESP32-Firmware passen, siehe BLE-Schnittstelle.md) ---------- */
@@ -133,16 +202,21 @@ async function openGatt() {
   statusChar.addEventListener('characteristicvaluechanged', e => onStatus(e.target.value));
   await statusChar.startNotifications();
   onStatus(await statusChar.readValue());
+  await openOta(svc);
   startTx();
   log('Verbunden mit ' + device.name);
   requestWakeLock();
+  if (expectAfterReboot) checkAfterReboot();
 }
 
 async function onDisconnected() {
-  stopTx(); btnChar = statusChar = null; status = null; render();
+  if (otaRunning) otaLost = true;
+  stopTx(); btnChar = statusChar = otaCtrl = otaData = null; status = null; authed = false; nonce = null;
+  rejectAllWaiters('Verbindung getrennt'); render(); renderFw();
   if (userDisconnect || !device) return;
-  // automatisch neu verbinden, solange die Seite offen ist
-  for (let i = 1; i <= 20 && !userDisconnect; i++) {
+  // automatisch neu verbinden, solange die Seite offen ist (nach einem Update länger, falls ein Rollback nötig ist)
+  const attempts = expectAfterReboot ? 45 : 20;
+  for (let i = 1; i <= attempts && !userDisconnect; i++) {
     log(`Verbindung verloren – Neuversuch ${i} …`);
     try { await openGatt(); return; } catch { await new Promise(r => setTimeout(r, Math.min(500 * i, 3000))); }
   }
@@ -161,7 +235,7 @@ function stopTx() { clearInterval(txTimer); txTimer = null; }
 let writing = false;
 async function sendState() {
   if (Date.now() - lastStatusAt > STATUS_TIMEOUT_MS) render();
-  if (!btnChar || writing) return;
+  if (!btnChar || writing || otaRunning) return;
   seq = (seq + 1) & 0xff;
   writing = true;
   try { await btnChar.writeValueWithoutResponse(new Uint8Array([pressedMask, seq])); }
@@ -189,15 +263,17 @@ function render() {
   $('dBus').className = 'dot ' + (busOk ? 'ok' : (bleUp && fresh && (f & F_ADDR_CLAIMED) ? 'warn' : ''));
   $('tBus').textContent = !bleUp || !fresh ? '–' : !(f & F_ADDR_CLAIMED) ? 'keine Adresse' : !(f & F_VT_CONNECTED) ? 'kein Terminal' : 'Terminal OK';
 
+  const updating = otaRunning || (f & F_UPDATE);
   const learn = f & F_LEARN_MODE;
   const auxOk = busOk && (f & F_POOL_ACTIVE);
   $('dAux').className = 'dot ' + (auxOk ? (learn ? 'warn' : 'ok') : '');
   $('tAux').textContent = !busOk ? '–' : !(f & F_POOL_ACTIVE) ? 'Pool lädt…' : learn ? 'Lernmodus' : 'aktiv';
 
-  const ready = auxOk;
+  const ready = auxOk && !updating;
   const banner = $('banner');
   banner.className = ready ? (learn ? 'warn' : 'ok') : (bleUp ? 'warn' : '');
-  banner.textContent = !bleUp ? 'Nicht verbunden' : !fresh ? 'ESP32 antwortet nicht' : !busOk ? 'ISOBUS nicht bereit'
+  if (updating && bleUp) banner.className = 'warn';
+  banner.textContent = !bleUp ? 'Nicht verbunden' : updating ? 'Firmware-Update läuft – Tasten gesperrt' : !fresh ? 'ESP32 antwortet nicht' : !busOk ? 'ISOBUS nicht bereit'
     : !(f & F_POOL_ACTIVE) ? 'AUX-N wird angemeldet…' : learn ? 'Terminal im Zuordnungsmodus – Taste drücken zum Zuordnen' : 'Bereit';
 
   buttons.forEach(b => {
@@ -210,6 +286,8 @@ function render() {
   const cb = $('connectBtn');
   cb.textContent = bleUp ? 'Trennen' : 'Verbinden';
   cb.classList.toggle('disconnect', bleUp);
+  cb.disabled = otaRunning;
+  $('fwBtn').disabled = !(bleUp && otaCtrl);
 }
 
 /* ---------- Bedienung ---------- */
@@ -238,6 +316,281 @@ buttons.forEach(b => {
 $('connectBtn').addEventListener('click', () => (txTimer ? disconnect() : connect()));
 document.addEventListener('visibilitychange', () => { if (document.hidden) releaseAll(); else requestWakeLock(); });
 setInterval(render, 500);
+
+
+/* ---------- Firmware-Update über Bluetooth (siehe BLE-Schnittstelle.md, Abschnitt „Firmware-Update“) ---------- */
+const OTA_CTRL_UUID = '2c24d633-f30f-4a07-81cc-dd9d8f4ea307'; // Write + Notify + Read (Info)
+const OTA_DATA_UUID = '4303f225-7d2b-466f-abb3-fad98f8a28bc'; // Write Without Response: [Offset u32 LE][Daten]
+const F_UPDATE = 0x10;                                        // Status-Flag: Update läuft
+const OP = { AUTH_START: 0x01, AUTH_RESPONSE: 0x02, SET_PIN: 0x03, BEGIN: 0x10, END: 0x11, ABORT: 0x12 };
+const EV = { CHALLENGE: 0x81, AUTH: 0x82, SET_PIN: 0x83, BEGIN: 0x90, ACK: 0x91, NACK: 0x92, END: 0x93, ERROR: 0x94 };
+const INFO = { DEFAULT_PIN: 0x01, AUTH: 0x02, LOCKED: 0x04, ACTIVE: 0x08, PENDING: 0x10 };
+const RESULT_TEXT = {
+  1: 'Nicht angemeldet', 2: 'PIN falsch', 3: 'Zu viele Fehlversuche – Gerät aus- und wieder einschalten',
+  4: 'Ungültige Daten', 5: 'Gerät ist gerade nicht bereit', 6: 'Bitte zuerst die Standard-PIN ändern', 7: 'Datei zu groß',
+  8: 'Fehler beim Schreiben in den Flash', 9: 'Prüfsumme falsch – Übertragung fehlerhaft', 10: 'Firmware-Datei ungültig',
+  11: 'Firmware gehört zu einem anderen Projekt', 12: 'Zeitüberschreitung bei der Übertragung', 13: 'Pufferüberlauf im ESP32',
+  14: 'Update abgebrochen', 15: 'Neue Firmware wird noch geprüft – bitte ca. 10 s warten'
+};
+const resultText = c => RESULT_TEXT[c] || ('Fehler ' + c);
+const OTA_WINDOW = 8192;            // max. unbestätigte Bytes (ESP-Puffer: 16 KB)
+const OTA_STALL_MS = 15000;         // ohne Fortschritt -> Abbruch
+const OTA_MAX_SIZE = 0x300000;      // Größe einer App-Partition
+const PROJECT_NAME = 'SectionRemote', CHIP_ID_ESP32S3 = 9;
+
+let otaCtrl = null, otaData = null, otaInfo = null, nonce = null, authed = false, currentPin = '';
+let otaRunning = false, otaAbort = false, otaLost = false, otaHandler = null, fwFile = null, fwMeta = null, expectAfterReboot = null;
+const waiters = [];
+
+async function openOta(svc) {
+  try {
+    otaCtrl = await svc.getCharacteristic(OTA_CTRL_UUID);
+    otaData = await svc.getCharacteristic(OTA_DATA_UUID);
+    otaCtrl.addEventListener('characteristicvaluechanged', e => onOtaEvent(e.target.value));
+    await otaCtrl.startNotifications();
+    await readInfo();
+  } catch { otaCtrl = otaData = null; otaInfo = null; } // ältere Firmware ohne Update-Funktion
+  renderFw();
+}
+
+const u8 = dv => new Uint8Array(dv.buffer, dv.byteOffset, dv.byteLength);
+const u32 = (b, i) => (b[i] | (b[i + 1] << 8) | (b[i + 2] << 16) | (b[i + 3] << 24)) >>> 0;
+const cstr = a => { const z = a.indexOf(0); return new TextDecoder().decode(z < 0 ? a : a.subarray(0, z)); };
+
+function onOtaEvent(dv) {
+  const b = u8(dv).slice();
+  if (otaHandler) otaHandler(b);
+  if (b[0] === EV.ERROR) { rejectAllWaiters(resultText(b[1])); return; }
+  const i = waiters.findIndex(w => w.code === b[0]);
+  if (i >= 0) { const w = waiters.splice(i, 1)[0]; clearTimeout(w.timer); w.resolve(b); }
+}
+function waitEvent(code, ms) {
+  return new Promise((resolve, reject) => {
+    const w = { code, resolve, reject };
+    w.timer = setTimeout(() => { const i = waiters.indexOf(w); if (i >= 0) waiters.splice(i, 1); reject(new Error('Keine Antwort vom ESP32')); }, ms);
+    waiters.push(w);
+  });
+}
+function rejectAllWaiters(text) { waiters.splice(0).forEach(w => { clearTimeout(w.timer); w.reject(new Error(text)); }); }
+async function ctrlCmd(bytes, evCode, ms = 5000) {
+  const p = waitEvent(evCode, ms);
+  try { await otaCtrl.writeValueWithResponse(bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes)); }
+  catch (e) { rejectAllWaiters(e.message); }
+  return p;
+}
+
+async function readInfo() {
+  const b = u8(await otaCtrl.readValue());
+  otaInfo = { proto: b[0], flags: b[1], mtu: b[2] | (b[3] << 8), version: cstr(b.subarray(4, 36)) };
+  renderFw();
+  return otaInfo;
+}
+
+async function hmac(pin, label) {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey('raw', enc.encode(pin), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const msgBytes = new Uint8Array([...nonce, ...enc.encode(label)]);
+  return new Uint8Array(await crypto.subtle.sign('HMAC', key, msgBytes));
+}
+
+function fwMsg(id, text, cls = '') { const el = $(id); el.textContent = text; el.className = 'msg ' + cls; }
+
+async function authenticate() {
+  const pin = $('pinIn').value.trim();
+  if (!/^\d{4,8}$/.test(pin)) return fwMsg('authMsg', 'Die PIN hat 4–8 Ziffern.', 'err');
+  $('authBtn').disabled = true;
+  try {
+    const c = await ctrlCmd([OP.AUTH_START], EV.CHALLENGE);
+    if (c[1]) throw new Error(resultText(c[1]));
+    nonce = c.slice(2, 18);
+    const r = await ctrlCmd([OP.AUTH_RESPONSE, ...await hmac(pin, 'SRAUTH')], EV.AUTH);
+    if (r[1] === 0) {
+      authed = true; currentPin = pin; $('pinIn').value = '';
+      fwMsg('authMsg', '');
+      fwMsg('pinMsg', r[2] ? 'Bitte jetzt eine eigene PIN festlegen.' : '', 'warn');
+    } else {
+      fwMsg('authMsg', resultText(r[1]) + (r[1] === 2 ? ` – noch ${r[2]} Versuch(e)` : ''), 'err');
+    }
+    await readInfo();
+  } catch (e) { fwMsg('authMsg', e.message, 'err'); }
+  finally { $('authBtn').disabled = false; renderFw(); }
+}
+
+async function changePin() {
+  const a = $('pinNew1').value.trim(), b = $('pinNew2').value.trim();
+  if (!/^\d{4,8}$/.test(a)) return fwMsg('pinMsg', 'Die neue PIN muss 4–8 Ziffern haben.', 'err');
+  if (a !== b) return fwMsg('pinMsg', 'Die beiden Eingaben stimmen nicht überein.', 'err');
+  if (a === '0000') return fwMsg('pinMsg', '0000 ist die Standard-PIN – bitte eine andere wählen.', 'err');
+  $('pinBtn').disabled = true;
+  try {
+    // neue PIN wird mit HMAC(alte PIN, Nonce || "SRPIN") verschlüsselt übertragen
+    const mask = await hmac(currentPin, 'SRPIN');
+    const pinBytes = new TextEncoder().encode(a);
+    const enc = new Uint8Array(8).map((_, i) => (pinBytes[i] || 0) ^ mask[i]);
+    const r = await ctrlCmd([OP.SET_PIN, pinBytes.length, ...enc], EV.SET_PIN);
+    if (r[1]) throw new Error(resultText(r[1]));
+    currentPin = a; $('pinNew1').value = $('pinNew2').value = '';
+    fwMsg('pinMsg', 'Neue PIN gespeichert.', 'ok');
+    await readInfo();
+  } catch (e) { fwMsg('pinMsg', e.message, 'err'); }
+  finally { $('pinBtn').disabled = false; renderFw(); }
+}
+
+/* Prüft die .bin-Datei (ESP-IDF-App-Image): Header-Magic, Chip ESP32-S3, App-Beschreibung, Projektname */
+function parseImage(buf) {
+  if (buf.length < 256) return { err: 'Datei zu klein' };
+  if (buf.length > OTA_MAX_SIZE) return { err: 'Datei zu groß für den Update-Bereich (max. 3 MB)' };
+  const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+  if (buf[0] !== 0xE9) return { err: 'Keine ESP32-Firmware-Datei' };
+  if (dv.getUint16(12, true) !== CHIP_ID_ESP32S3) return { err: 'Firmware ist nicht für den ESP32-S3' };
+  if (dv.getUint32(32, true) !== 0xABCD5432)
+    return { err: 'Keine App-Firmware – vermutlich die „merged“-Datei für USB. Bitte SectionRemote.bin wählen.' };
+  const meta = {
+    version: cstr(buf.subarray(48, 80)), project: cstr(buf.subarray(80, 112)),
+    time: cstr(buf.subarray(112, 128)), date: cstr(buf.subarray(128, 144))
+  };
+  if (meta.project !== PROJECT_NAME) return { err: `Firmware gehört zum Projekt „${meta.project}“, nicht zu ${PROJECT_NAME}` };
+  return meta;
+}
+
+async function onFileChosen() {
+  fwFile = fwMeta = null; $('fileInfo').innerHTML = ''; fwMsg('updMsg', '');
+  const f = $('fileIn').files[0];
+  if (f) {
+    const buf = new Uint8Array(await f.arrayBuffer());
+    const meta = parseImage(buf);
+    if (meta.err) { fwMsg('updMsg', meta.err, 'err'); }
+    else {
+      fwFile = buf;
+      fwMeta = { ...meta, sha: new Uint8Array(await crypto.subtle.digest('SHA-256', buf)) };
+      const kv = [['Datei', f.name], ['Größe', (buf.length / 1024).toFixed(0) + ' KB'], ['Version', meta.version], ['Erstellt', meta.date + ' ' + meta.time]];
+      $('fileInfo').innerHTML = kv.map(([k, v]) => `<span>${k}</span><span>${v.replace(/[<>&]/g, '')}</span>`).join('');
+      if (otaInfo && meta.version === otaInfo.version) fwMsg('updMsg', 'Diese Version läuft bereits auf dem Gerät.', 'warn');
+    }
+  }
+  renderFw();
+}
+
+async function startUpdate() {
+  if (!fwFile || otaRunning) return;
+  if (!confirm(`Firmware ${fwMeta.version} installieren?\n\nDas Gerät meldet sich dafür vom ISOBUS ab und startet danach neu. ` +
+               'Nur im Stillstand durchführen und die App im Vordergrund lassen.')) return;
+  otaRunning = true; otaAbort = false; otaLost = false; releaseAll(); render();
+  const size = fwFile.length, t0 = Date.now();
+  let begun = false, acked = 0, sent = 0, nackTo = null, errText = null, wake = null, lastAckAt = Date.now();
+  const kick = () => { if (wake) { const w = wake; wake = null; w(); } };
+  $('progWrap').hidden = false; setProgress(0, size, t0);
+  renderFw();
+  try {
+    await readInfo();
+    const chunk = Math.min(otaInfo.mtu - 3, 512) - 4; // Nutzdaten je Paket (4 Byte Offset)
+    if (chunk < 16) throw new Error('BLE-Paketgröße zu klein (MTU ' + otaInfo.mtu + ')');
+    fwMsg('updMsg', 'Gerät meldet sich vom ISOBUS ab und bereitet den Speicher vor …', 'warn');
+
+    otaHandler = b => {
+      if (b[0] === EV.ACK) { acked = u32(b, 1); lastAckAt = Date.now(); }
+      else if (b[0] === EV.NACK) { nackTo = u32(b, 1); }
+      else if (b[0] === EV.ERROR) { errText = resultText(b[1]); }
+      kick();
+    };
+    const begin = new Uint8Array(37);
+    begin[0] = OP.BEGIN; new DataView(begin.buffer).setUint32(1, size, true); begin.set(fwMeta.sha, 5);
+    const r = await ctrlCmd(begin, EV.BEGIN, 30000);
+    if (r[1]) throw new Error(resultText(r[1]));
+    begun = true;
+    fwMsg('updMsg', 'Übertrage …', 'warn');
+
+    const pkt = new Uint8Array(4 + chunk), pdv = new DataView(pkt.buffer);
+    lastAckAt = Date.now();
+    while (acked < size) {
+      if (errText) throw new Error(errText);
+      if (otaAbort) throw new Error('Abgebrochen');
+      if (otaLost || !device?.gatt.connected) throw new Error('Bluetooth-Verbindung verloren');
+      if (Date.now() - lastAckAt > OTA_STALL_MS) throw new Error('Keine Rückmeldung vom ESP32');
+      if (nackTo !== null) { sent = nackTo; nackTo = null; }
+      if (sent < size && sent - acked < OTA_WINDOW) {
+        const off = sent, n = Math.min(chunk, size - off);
+        pdv.setUint32(0, off, true);
+        pkt.set(fwFile.subarray(off, off + n), 4);
+        await otaData.writeValueWithoutResponse(n === chunk ? pkt : pkt.slice(0, 4 + n));
+        sent = off + n;
+      } else {
+        await new Promise(res => { wake = res; setTimeout(kick, 1000); });
+      }
+      setProgress(acked, size, t0);
+    }
+    fwMsg('updMsg', 'Prüfe Firmware im Gerät …', 'warn');
+    const e = await ctrlCmd([OP.END], EV.END, 20000);
+    if (e[1]) throw new Error(resultText(e[1]));
+    expectAfterReboot = { version: fwMeta.version, previous: otaInfo.version };
+    fwMsg('updMsg', 'Übertragung vollständig und geprüft. ESP32 startet neu – warte auf Verbindung …', 'ok');
+  } catch (e) {
+    if (begun && !errText && !otaLost && device?.gatt.connected) { try { await otaCtrl.writeValueWithResponse(new Uint8Array([OP.ABORT])); } catch {} }
+    fwMsg('updMsg', e.message + (begun ? ' – das Gerät startet mit der bisherigen Firmware neu.' : ''), 'err');
+    if (!begun && btnChar) startTx();
+  } finally {
+    otaHandler = null; otaRunning = false; render(); renderFw();
+  }
+}
+
+function setProgress(done, size, t0) {
+  const pct = Math.floor(done * 100 / size);
+  $('prog').value = pct;
+  const sec = (Date.now() - t0) / 1000, rate = done / Math.max(sec, 0.1);
+  const rest = rate > 0 ? Math.ceil((size - done) / rate) : 0;
+  $('progTxt').textContent = `${pct} % · ${(done / 1024).toFixed(0)} / ${(size / 1024).toFixed(0)} KB · ${(rate / 1024).toFixed(1)} KB/s` +
+    (done > 0 && done < size ? ` · noch ca. ${rest} s` : '');
+}
+
+async function checkAfterReboot() {
+  const exp = expectAfterReboot;
+  try {
+    const info = await readInfo();
+    if (info.version !== exp.version) {
+      expectAfterReboot = null;
+      fwMsg('updMsg', `Neue Firmware ist nicht gestartet – es läuft weiterhin ${info.version}.`, 'err');
+      return;
+    }
+    if (!(info.flags & INFO.PENDING)) {
+      expectAfterReboot = null;
+      fwMsg('updMsg', `Update erfolgreich: Firmware ${info.version} läuft und ist bestätigt.`, 'ok');
+      return;
+    }
+    fwMsg('updMsg', `Firmware ${info.version} läuft – wird geprüft (ca. 10 s) …`, 'warn');
+    setTimeout(() => { if (otaCtrl && expectAfterReboot === exp) checkAfterReboot(); }, 3000);
+  } catch { /* nächster Versuch nach erneuter Verbindung */ }
+}
+
+function renderFw() {
+  const connected = !!(device?.gatt.connected && otaCtrl);
+  const f = otaInfo?.flags ?? 0;
+  $('fwDev').textContent = device?.name || '–';
+  $('fwVer').textContent = connected && otaInfo ? otaInfo.version : '–';
+  $('fwState').textContent = !connected ? 'nicht verbunden' : otaRunning || (f & INFO.ACTIVE) ? 'Update läuft'
+    : (f & INFO.LOCKED) ? 'gesperrt (zu viele falsche PINs) – Gerät neu starten' : (f & INFO.PENDING) ? 'neue Firmware wird geprüft'
+    : (f & INFO.DEFAULT_PIN) ? 'Standard-PIN aktiv' : 'bereit';
+  $('cardAuth').hidden = !connected || authed;
+  $('cardPin').hidden = !connected || !authed;
+  $('pinTitle').textContent = (f & INFO.DEFAULT_PIN) ? 'Eigene PIN festlegen (vor dem ersten Update nötig)' : 'PIN ändern';
+  $('cardUpdate').hidden = !(connected && authed && !(f & INFO.DEFAULT_PIN)) && !otaRunning && !expectAfterReboot;
+  $('startBtn').disabled = !fwFile || otaRunning || !connected || !authed || !!(f & INFO.PENDING);
+  $('abortBtn').hidden = !otaRunning;
+  $('fileIn').disabled = otaRunning;
+  $('pinBtn').disabled = otaRunning;
+  $('fwClose').disabled = otaRunning;
+}
+
+$('fwBtn').addEventListener('click', async () => {
+  $('fwPanel').hidden = false; renderFw();
+  if (otaCtrl) { try { await readInfo(); } catch {} }
+});
+$('fwClose').addEventListener('click', () => { $('fwPanel').hidden = true; });
+$('authBtn').addEventListener('click', authenticate);
+$('pinIn').addEventListener('keydown', e => { if (e.key === 'Enter') authenticate(); });
+$('pinBtn').addEventListener('click', changePin);
+$('fileIn').addEventListener('change', onFileChosen);
+$('startBtn').addEventListener('click', startUpdate);
+$('abortBtn').addEventListener('click', () => { otaAbort = true; });
 
 /* ---------- Bildschirm anlassen ---------- */
 let wakeLock = null;
