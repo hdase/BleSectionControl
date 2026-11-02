@@ -27,7 +27,7 @@
   .dot.ok { background: var(--ok); } .dot.warn { background: var(--warn); }
   #banner { border-radius: 10px; padding: 12px; font-size: 14px; font-weight: 600; text-align: center; margin-bottom: 14px; background: var(--bad); }
   #banner.ok { background: var(--ok); } #banner.warn { background: var(--warn); color: #111; }
-  .grid { flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 14px; padding-bottom: 16px; min-height: 0; }
+  .grid { flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr minmax(96px, 0.6fr); gap: 14px; padding-bottom: 16px; min-height: 0; }
   .side { grid-row: 1; text-align: center; font-size: 12px; color: var(--muted); }
   button.aux { border: 0; border-radius: 18px; background: var(--btn); color: var(--text); display: flex; flex-direction: column;
     align-items: center; justify-content: center; gap: 8px; font-size: 14px; touch-action: none; position: relative; min-height: 120px; }
@@ -36,6 +36,8 @@
   button.aux.off { box-shadow: inset 0 -6px 0 var(--btn-off); }
   button.aux.pressed { background: #4c6178; transform: scale(0.97); }
   button.aux:disabled { opacity: .35; }
+  button.aux.main { grid-column: 1 / -1; flex-direction: row; gap: 14px; min-height: 96px; box-shadow: inset 0 -6px 0 #1f6feb; }
+  button.aux.main svg { width: auto; height: 60%; max-height: 64px; }
   button.aux .unassigned { position: absolute; top: 8px; right: 10px; font-size: 11px; color: var(--warn); }
   #log { font-size: 11px; color: var(--muted); min-height: 16px; padding-bottom: 8px; text-align: center; }
 </style>
@@ -74,6 +76,11 @@
     <svg viewBox="0 0 100 60"><g stroke="currentColor" stroke-width="7" stroke-linecap="round" fill="none">
       <path d="M62 30h28"/><path d="M48 30H10M24 16 10 30l14 14"/></g></svg>
     <span>Rechts AUS</span><span class="unassigned" hidden>nicht zugeordnet</span>
+  </button>
+  <button class="aux main" data-bit="4" disabled aria-label="Hauptschalter umschalten">
+    <svg viewBox="0 0 60 60"><g stroke="currentColor" stroke-width="7" stroke-linecap="round" fill="none">
+      <path d="M19 15a20 20 0 1 0 22 0"/><path d="M30 6v22"/></g></svg>
+    <span>Hauptschalter EIN/AUS</span><span class="unassigned" hidden>nicht zugeordnet</span>
   </button>
 </div>
 <div id="log"></div>
@@ -165,7 +172,7 @@ async function sendState() {
 /* ---------- Status vom ESP32 ---------- */
 function onStatus(dv) {
   lastStatusAt = Date.now();
-  status = { flags: dv.getUint8(0), assigned: dv.byteLength > 1 ? dv.getUint8(1) : 0x0f };
+  status = { flags: dv.getUint8(0), assigned: dv.byteLength > 1 ? dv.getUint8(1) : 0x1f };
   render();
 }
 
@@ -196,7 +203,7 @@ function render() {
   buttons.forEach(b => {
     const bit = +b.dataset.bit;
     b.disabled = !ready;
-    b.querySelector('.unassigned').hidden = !ready || learn || ((status?.assigned ?? 0x0f) >> bit & 1);
+    b.querySelector('.unassigned').hidden = !ready || learn || ((status?.assigned ?? 0x1f) >> bit & 1);
   });
   if (!ready) releaseAll();
 
@@ -247,7 +254,7 @@ function startTxDemo() {
   demoTimer = setInterval(() => {
     demoT++;
     const flags = (demoT > 2 ? F_ADDR_CLAIMED : 0) | (demoT > 4 ? F_VT_CONNECTED : 0) | (demoT > 6 ? F_POOL_ACTIVE : 0);
-    onStatus(new DataView(new Uint8Array([flags, 0b1011]).buffer));
+    onStatus(new DataView(new Uint8Array([flags, 0b11011]).buffer));
   }, 400);
 }
 function stopDemo() { clearInterval(demoTimer); stopTx(); demoT = 0; status = null; lastStatusAt = 0; render(); }

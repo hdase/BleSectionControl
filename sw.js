@@ -1,5 +1,5 @@
 // Offline-Cache, damit die App auch ohne Netz auf dem Feld startet
-const CACHE = 'section-remote-v1';
+const CACHE = 'section-remote-v2';
 const FILES = ['./', './index.html', './manifest.json', './icon.svg', './icon-512.png'];
 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting())));
 self.addEventListener('activate', e => e.waitUntil(

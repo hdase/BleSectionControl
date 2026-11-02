@@ -12,7 +12,7 @@ Gerätename im Advertising: `SectionRemote` (Präfix genügt, z. B. `SectionRemo
 
 | Byte | Inhalt |
 |---|---|
-| 0 | Bitmaske gedrückter Tasten: Bit0 = Links EIN, Bit1 = Links AUS, Bit2 = Rechts EIN, Bit3 = Rechts AUS |
+| 0 | Bitmaske gedrückter Tasten: Bit0 = Links EIN, Bit1 = Links AUS, Bit2 = Rechts EIN, Bit3 = Rechts AUS, Bit4 = Hauptschalter umschalten |
 | 1 | Sequenzzähler 0–255 (Heartbeat) |
 
 Ein kurzer Tipp wird von der App mindestens 200 ms lang als „gedrückt“ gesendet.
@@ -24,12 +24,12 @@ Ein kurzer Tipp wird von der App mindestens 200 ms lang als „gedrückt“ gese
 | Byte | Inhalt |
 |---|---|
 | 0 | Flags: Bit0 = Adresse belegt (Address Claim OK), Bit1 = Terminal (VT) verbunden, Bit2 = Object Pool aktiv / AUX-N angemeldet, Bit3 = Lernmodus (Zuordnung im Terminal läuft) |
-| 1 | Bitmaske: welche der vier Tasten im Terminal einer Funktion zugeordnet sind (gleiche Bit-Reihenfolge wie oben) |
+| 1 | Bitmaske: welche der vier Tasten im Terminal einer Funktion zugeordnet sind (gleiche Bit-Reihenfolge wie oben; die Firmware meldet immer 0x1F, da die Zuordnung am Eingabegerät nicht auslesbar ist) |
 
 Die App zeigt „ESP32 antwortet nicht“, wenn 1,5 s kein Status kommt, und sperrt dann die Tasten.
 
 ## ISOBUS-Seite (Firmware)
 
 - Bibliothek: AgIsoStack++ (ESP-IDF/PlatformIO), CAN über `MCP2515CANInterface` + `SPIInterfaceESP` (CS = D7) oder alternativ den internen TWAI-Controller.
-- Vorlage: `examples/virtual_terminal/aux_inputs` – vier Auxiliary-Input-Type-2-Objekte (Boolean, momentary) mit den vier Icons, `update_auxiliary_input(objectId, value, transitions)` bei jeder Änderung.
+- Vorlage: `examples/virtual_terminal/aux_inputs` – fünf Auxiliary-Input-Type-2-Objekte (Boolean momentary, IDs 4000–4004) mit Icons; der Hauptschalter (4004) ist ebenfalls ein Tastimpuls – das Umschalten übernimmt die Maschine, `update_auxiliary_input(objectId, value, transitions)` bei jeder Änderung.
 - 250 kbit/s, Abschlusswiderstand am Board offen lassen.
