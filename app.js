@@ -3,7 +3,6 @@
 const uuid = n => `7b1e000${n}-5c3a-4e6f-9a1d-b1e5ec710000`;
 const SVC = uuid(1), CH_INPUT = uuid(2), CH_STATUS = uuid(3), CH_INFO = uuid(4), CH_OTA_CTRL = uuid(5), CH_OTA_DATA = uuid(6), CH_TRACE_CTRL = uuid(7), CH_TRACE_DATA = uuid(8);
 
-const PIN = '123456';  // Standard-PIN der Firmware; die App meldet sich damit automatisch an
 const HEARTBEAT_MS = 200;
 const STATUS_TIMEOUT_MS = 1000;
 const CHUNK = 196;  // plus 4 Byte Offset = 200 Byte pro Schreibzugriff
@@ -12,7 +11,6 @@ const $ = id => document.getElementById(id);
 const keys = [...document.querySelectorAll('.key')];
 
 let device = null, chInput, chStatus, chInfo, chCtrl, chData, chTraceCtrl, chTraceData;
-let loginBusy = false, loginError = "";
 $("app-ver").textContent = typeof APP_VERSION === "string" ? APP_VERSION : "?";
 let mask = 0, seq = 0, sending = false;
 let lastStatusAt = 0, lastFlags = 0;
@@ -49,11 +47,9 @@ function render() {
   const alert = $('alert');
   if (connected && !alive) { alert.textContent = 'ESP32 antwortet nicht'; alert.hidden = false; }
   else if (!connected && device) { alert.textContent = 'Verbindung getrennt'; alert.hidden = false; }
-  else if (alive && !(f & 32) && !updating && loginError) { alert.textContent = "Anmeldung am ESP32 fehlgeschlagen: " + loginError; alert.hidden = false; }
   else alert.hidden = true;
 
-  const authed = !!(f & 32);
-  const usable = alive && authed && !updating && !(f & 16);
+  const usable = alive && !updating && !(f & 16);
   keys.forEach(k => { k.disabled = !usable; });
   if (!usable && mask) { mask = 0; keys.forEach(k => k.classList.remove('active')); }
   $("update").disabled = !connected || updating;
@@ -132,7 +128,6 @@ async function openGatt() {
   lastStatusAt = performance.now();
   try { $("fw-ver").textContent = $("fw-ver2").textContent = new TextDecoder().decode(await chInfo.readValue()); } catch (e) {}
   requestWakeLock();
-  login();
 }
 
 function onDisconnected() {
@@ -190,7 +185,6 @@ function ctrl(cmd, payload = [], timeout = 5000) {
   return chCtrl.writeValueWithResponse(new Uint8Array([cmd, ...payload])).then(() => wait);
 }
 
-const enc = new TextEncoder();
 async function sha256(...parts) {
   const total = parts.reduce((n, p) => n + p.length, 0);
   const buf = new Uint8Array(total);
@@ -198,17 +192,9 @@ async function sha256(...parts) {
   return new Uint8Array(await crypto.subtle.digest('SHA-256', buf));
 }
 
-const RESULT = { 1: 'ungültig', 2: 'PIN falsch bzw. nicht berechtigt', 3: 'ESP32 beschäftigt', 4: 'Flash-Fehler', 5: 'Prüfsumme stimmt nicht', 6: 'zu viele Fehlversuche, bitte 30 s warten' };
+const RESULT = { 1: 'ungültig', 3: 'ESP32 beschäftigt', 4: 'Flash-Fehler', 5: 'Prüfsumme stimmt nicht' };
 function check(v, what) { if (v[1] !== 0) throw new Error(what + ': ' + (RESULT[v[1]] || 'Fehler ' + v[1])); }
 
-async function authenticate(pin) {
-  const n = await ctrl(0x01);
-  const nonce = n.slice(2, 18);
-  const pinBytes = enc.encode(pin);
-  const proof = await sha256(nonce, pinBytes);
-  check(await ctrl(0x02, proof), 'Anmeldung');
-  return { nonce, pinBytes };
-}
 
 const msg = t => { $('fw-msg').textContent = t; };
 
@@ -218,8 +204,6 @@ async function runUpdate(getData) {
   prog.hidden = false; prog.value = 0;
   try {
     const data = await getData();
-    msg('Anmelden …');
-    await authenticate(PIN);
     const hash = await sha256(data);
     const size = new Uint8Array(4); new DataView(size.buffer).setUint32(0, data.length, true);
     msg('Übertragung startet …');
@@ -317,15 +301,6 @@ $('fw-install').addEventListener('click', () => {
   runUpdate(async () => fw.data);
 });
 
-// ---------- Anmeldung (Tasten, Update und Trace nur für angemeldete Handys) ----------
-async function login() {
-  if (loginBusy || !chCtrl) return;
-  loginBusy = true;
-  loginError = '';
-  try { await authenticate(PIN); }
-  catch (e) { loginError = e.message; }
-  loginBusy = false;
-}
 
 // ---------- CAN-Diagnose: Trace herunterladen ----------
 const FRAME_SIZE = 18, EVENT_SIZE = 80;
@@ -434,7 +409,6 @@ function eventsToText(buf) {
 
 async function runDownload(kind) {
   if (!chTraceCtrl || !device || !device.gatt.connected) return dmsg('Nicht verbunden.');
-  if (!(lastFlags & 32)) return dmsg('Nicht angemeldet.');
   const buttons = [$('dl-trace'), $('dl-events')];
   buttons.forEach(b => { b.disabled = true; });
   const prog = $('tprog'); prog.hidden = false; prog.value = 0;
