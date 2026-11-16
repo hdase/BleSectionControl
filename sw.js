@@ -13,7 +13,7 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   if (new URL(e.request.url).pathname.includes('/firmware/')) return;  // Firmware nie aus dem Cache
-  e.respondWith(fetch(e.request).then(r => {
+  e.respondWith(fetch(e.request, { cache: 'no-cache' }).then(r => {
     const copy = r.clone();
     caches.open(CACHE).then(c => c.put(e.request, copy));
     return r;

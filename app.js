@@ -494,5 +494,5 @@ async function runDownload(kind) {
 $('dl-trace').addEventListener('click', () => runDownload('trace'));
 $('dl-events').addEventListener('click', () => runDownload('events'));
 
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => {});
 render();
