@@ -1,0 +1,39 @@
+:root {
+  --bg: #101418; --fg: #e8eaed; --card: #1b2127; --muted: #8a949e;
+  --ok: #3ddc84; --warn: #ffb300; --bad: #ff5252; --accent: #4da3ff;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; background: var(--bg); color: var(--fg); font: 16px system-ui, sans-serif; }
+body { min-height: 100vh; padding: 12px 16px 24px; display: flex; flex-direction: column; gap: 12px; max-width: 640px; margin: 0 auto; }
+header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+h1 { font-size: 1.1rem; margin: 0; }
+button { font: inherit; color: inherit; border: 0; border-radius: 12px; background: var(--card); padding: 10px 16px; }
+button.primary { background: var(--accent); color: #00182e; font-weight: 600; }
+button:disabled { opacity: .35; }
+
+#status { background: var(--card); border-radius: 12px; padding: 10px 14px; display: grid; gap: 6px; }
+.row { display: grid; grid-template-columns: 14px 1fr auto; gap: 10px; align-items: center; }
+.dot { width: 12px; height: 12px; border-radius: 50%; background: var(--muted); }
+.dot.ok { background: var(--ok); } .dot.warn { background: var(--warn); } .dot.bad { background: var(--bad); }
+#alert { background: var(--bad); color: #fff; border-radius: 8px; padding: 8px 10px; font-weight: 600; }
+
+#pad { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; flex: 1; min-height: 340px; }
+.key { display: flex; flex-wrap: wrap; align-content: center; justify-content: center; gap: 4px 10px; background: var(--card); border: 2px solid #2b343c; touch-action: none; user-select: none; -webkit-user-select: none; font-size: 1rem; }
+.key svg { width: 44px; height: 44px; }
+.key span { flex-basis: 100%; text-align: center; color: var(--muted); }
+.key.wide { grid-column: 1 / -1; }
+.key.active { background: var(--accent); color: #00182e; border-color: var(--accent); }
+.key.active span { color: #00182e; }
+
+#fw { background: var(--card); border-radius: 12px; padding: 10px 14px; }
+#fw summary { cursor: pointer; }
+#fw label { display: block; margin: 8px 0; color: var(--muted); }
+#fw input { display: block; width: 100%; margin-top: 4px; padding: 8px; background: var(--bg); color: var(--fg); border: 1px solid #2b343c; border-radius: 8px; }
+progress { width: 100%; }
+
+#login { background: var(--card); border-radius: 12px; padding: 10px 14px; display: grid; gap: 8px; }
+#login label { color: var(--muted); }
+#login input, #diag input { display: block; width: 100%; margin-top: 4px; padding: 8px; background: var(--bg); color: var(--fg); border: 1px solid #2b343c; border-radius: 8px; }
+#diag { background: var(--card); border-radius: 12px; padding: 10px 14px; }
+#diag button { margin: 4px 6px 4px 0; }
+footer { color: var(--muted); font-size: .8rem; text-align: center; }
