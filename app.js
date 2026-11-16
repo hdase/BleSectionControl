@@ -14,6 +14,7 @@ let device = null, chInput, chStatus, chInfo, chCtrl, chData, chTraceCtrl, chTra
 $("app-ver").textContent = typeof APP_VERSION === "string" ? APP_VERSION : "?";
 let mask = 0, seq = 0, sending = false;
 let lastStatusAt = 0, lastFlags = 0;
+let smoothRssi = null;   // geglätteter RSSI (dBm) der Verbindung, null = unbekannt
 let updating = false;
 let wakeLock = null;
 
@@ -28,6 +29,7 @@ function render() {
   const alive = connected && (performance.now() - lastStatusAt) < STATUS_TIMEOUT_MS;
   const f = alive ? lastFlags : 0;
 
+  renderSignal(alive);
   if (!connected) setRow('ble', '', 'bad', 'getrennt');
   else if (!alive) setRow('ble', '', 'bad', 'keine Antwort');
   else setRow('ble', '', 'ok', 'verbunden');
@@ -117,6 +119,10 @@ async function openGatt() {
   chStatus.addEventListener('characteristicvaluechanged', e => {
     const v = e.target.value;
     if (v.byteLength >= 2) { lastFlags = v.getUint8(1); lastStatusAt = performance.now(); }
+    if (v.byteLength >= 5) {
+      const r = v.getInt8(4);
+      if (r !== 127) smoothRssi = smoothRssi === null ? r : smoothRssi * 0.7 + r * 0.3;
+    }
   });
   chCtrl.addEventListener("characteristicvaluechanged", onCtrl);
   chTraceCtrl.addEventListener("characteristicvaluechanged", onTraceCtrl);
@@ -132,6 +138,7 @@ async function openGatt() {
 
 function onDisconnected() {
   lastFlags = 0;
+  smoothRssi = null;
   mask = 0;
   render();
   if (!updating) autoReconnect();
@@ -438,3 +445,18 @@ $('dl-events').addEventListener('click', () => runDownload('events'));
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => {});
 render();
+
+// ---------- Signalstärke (RSSI, vom ESP32 gemessen) ----------
+// -100 dBm = 0 %, -50 dBm = 100 %, Anzeige in 10-%-Schritten, 5 Balken
+function renderSignal(alive) {
+  const el = $('sig');
+  if (!alive || smoothRssi === null) { el.hidden = true; return; }
+  const pct = Math.max(0, Math.min(100, Math.round((smoothRssi + 100) * 2 / 10) * 10));
+  const bars = Math.ceil(pct / 20);
+  [...el.querySelectorAll('i')].forEach((b, i) => b.classList.toggle('on', i < bars));
+  el.classList.toggle('low', pct <= 30);
+  el.classList.toggle('mid', pct > 30 && pct <= 60);
+  $('sig-pct').textContent = pct + ' %';
+  el.title = Math.round(smoothRssi) + ' dBm';
+  el.hidden = false;
+}

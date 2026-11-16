@@ -38,3 +38,12 @@ progress { width: 100%; }
 #diag button { margin: 4px 6px 4px 0; }
 footer { color: var(--muted); font-size: .8rem; text-align: center; }
 #fw button { margin: 4px 6px 4px 0; }
+
+.val { display: inline-flex; align-items: center; gap: 8px; }
+.sig { display: inline-flex; align-items: flex-end; gap: 2px; height: 18px; }
+.sig i { display: block; width: 4px; background: #2b343c; border-radius: 1px; }
+.sig i:nth-child(1) { height: 5px; } .sig i:nth-child(2) { height: 8px; } .sig i:nth-child(3) { height: 11px; } .sig i:nth-child(4) { height: 14px; } .sig i:nth-child(5) { height: 18px; }
+.sig i.on { background: var(--ok); }
+.sig.mid i.on { background: var(--warn); }
+.sig.low i.on { background: var(--bad); }
+.sig em { font-style: normal; margin-left: 6px; color: var(--muted); font-size: .85rem; min-width: 3.2em; align-self: center; }
