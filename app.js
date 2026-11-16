@@ -3,7 +3,7 @@
 const uuid = n => `7b1e000${n}-5c3a-4e6f-9a1d-b1e5ec710000`;
 const SVC = uuid(1), CH_INPUT = uuid(2), CH_STATUS = uuid(3), CH_INFO = uuid(4), CH_OTA_CTRL = uuid(5), CH_OTA_DATA = uuid(6), CH_TRACE_CTRL = uuid(7), CH_TRACE_DATA = uuid(8);
 
-const DEFAULT_PIN = '123456';  // Standard-PIN der Firmware; erst bei geänderter PIN erscheint die Abfrage
+const PIN = '123456';  // Standard-PIN der Firmware; die App meldet sich damit automatisch an
 const HEARTBEAT_MS = 200;
 const STATUS_TIMEOUT_MS = 1000;
 const CHUNK = 196;  // plus 4 Byte Offset = 200 Byte pro Schreibzugriff
@@ -12,8 +12,7 @@ const $ = id => document.getElementById(id);
 const keys = [...document.querySelectorAll('.key')];
 
 let device = null, chInput, chStatus, chInfo, chCtrl, chData, chTraceCtrl, chTraceData;
-let currentPin = ""; try { currentPin = localStorage.getItem("blesc.pin") || ""; } catch (e) {}
-let loginBusy = false, loginFailed = false;
+let loginBusy = false, loginError = "";
 $("app-ver").textContent = typeof APP_VERSION === "string" ? APP_VERSION : "?";
 let mask = 0, seq = 0, sending = false;
 let lastStatusAt = 0, lastFlags = 0;
@@ -50,16 +49,15 @@ function render() {
   const alert = $('alert');
   if (connected && !alive) { alert.textContent = 'ESP32 antwortet nicht'; alert.hidden = false; }
   else if (!connected && device) { alert.textContent = 'Verbindung getrennt'; alert.hidden = false; }
+  else if (alive && !(f & 32) && !updating && loginError) { alert.textContent = "Anmeldung am ESP32 fehlgeschlagen: " + loginError; alert.hidden = false; }
   else alert.hidden = true;
 
   const authed = !!(f & 32);
-  $("login").hidden = !(alive && !authed && !updating);
   const usable = alive && authed && !updating && !(f & 16);
   keys.forEach(k => { k.disabled = !usable; });
   if (!usable && mask) { mask = 0; keys.forEach(k => k.classList.remove('active')); }
   $("update").disabled = !connected || updating;
   $("fw-install").disabled = !connected || updating;
-  $('setpin').disabled = !connected || updating;
   $('connect').textContent = connected ? 'Trennen' : 'Verbinden';
 }
 setInterval(render, 200);
@@ -134,7 +132,7 @@ async function openGatt() {
   lastStatusAt = performance.now();
   try { $("fw-ver").textContent = $("fw-ver2").textContent = new TextDecoder().decode(await chInfo.readValue()); } catch (e) {}
   requestWakeLock();
-  login(currentPin || DEFAULT_PIN, true);  // ohne gespeicherte PIN zuerst die Standard-PIN probieren
+  login();
 }
 
 function onDisconnected() {
@@ -215,15 +213,13 @@ async function authenticate(pin) {
 const msg = t => { $('fw-msg').textContent = t; };
 
 async function runUpdate(getData) {
-  const pin = currentPin;
-  if (!pin) return msg('Bitte zuerst oben mit der PIN anmelden.');
   const prog = $('prog');
   updating = true; updateFailed = null; mask = 0; render();
   prog.hidden = false; prog.value = 0;
   try {
     const data = await getData();
     msg('Anmelden …');
-    await authenticate(pin);
+    await authenticate(PIN);
     const hash = await sha256(data);
     const size = new Uint8Array(4); new DataView(size.buffer).setUint32(0, data.length, true);
     msg('Übertragung startet …');
@@ -263,21 +259,6 @@ $('update').addEventListener('click', () => {
   runUpdate(async () => new Uint8Array(await file.arrayBuffer()));
 });
 
-$('setpin').addEventListener('click', async () => {
-  const oldPin = currentPin, newPin = $('newpin').value;
-  if (!oldPin) return msg('Bitte zuerst oben mit der PIN anmelden.');
-  if (newPin.length < 4 || newPin.length > 16) return msg('Neue PIN: 4 bis 16 Zeichen.');
-  try {
-    const { nonce, pinBytes } = await authenticate(oldPin);
-    const key = await sha256(new Uint8Array([0x50]), nonce, pinBytes);
-    const nb = enc.encode(newPin);
-    const x = nb.map((b, i) => b ^ key[i]);
-    check(await ctrl(0x03, [nb.length, ...x]), 'PIN ändern');
-    $('newpin').value = '';
-    savePin(newPin);
-    msg('PIN geändert.');
-  } catch (e) { msg('PIN ändern fehlgeschlagen: ' + e.message); }
-});
 
 
 // ---------- Online-Update: Firmware von der App-Adresse (GitHub Pages) laden ----------
@@ -336,29 +317,15 @@ $('fw-install').addEventListener('click', () => {
   runUpdate(async () => fw.data);
 });
 
-// ---------- PIN-Anmeldung (Tasten und Update nur für angemeldete Handys) ----------
-function savePin(pin) {
-  currentPin = pin;
-  try { localStorage.setItem('blesc.pin', pin); } catch (e) {}
-}
-
-async function login(pin, silent) {
+// ---------- Anmeldung (Tasten, Update und Trace nur für angemeldete Handys) ----------
+async function login() {
   if (loginBusy || !chCtrl) return;
   loginBusy = true;
-  try {
-    await authenticate(pin);
-    savePin(pin);
-    $('loginpin').value = '';
-    msg('');
-  } catch (e) {
-    if (silent) { try { localStorage.removeItem('blesc.pin'); } catch (_) {} currentPin = ''; }
-    $('alert').textContent = 'Anmeldung fehlgeschlagen: ' + e.message;
-    $('alert').hidden = false;
-  }
+  loginError = '';
+  try { await authenticate(PIN); }
+  catch (e) { loginError = e.message; }
   loginBusy = false;
 }
-$('loginbtn').addEventListener('click', () => { const p = $('loginpin').value; if (p) login(p, false); });
-$('loginpin').addEventListener('keydown', e => { if (e.key === 'Enter') $('loginbtn').click(); });
 
 // ---------- CAN-Diagnose: Trace herunterladen ----------
 const FRAME_SIZE = 18, EVENT_SIZE = 80;
@@ -467,7 +434,7 @@ function eventsToText(buf) {
 
 async function runDownload(kind) {
   if (!chTraceCtrl || !device || !device.gatt.connected) return dmsg('Nicht verbunden.');
-  if (!(lastFlags & 32)) return dmsg('Bitte zuerst mit der PIN anmelden.');
+  if (!(lastFlags & 32)) return dmsg('Nicht angemeldet.');
   const buttons = [$('dl-trace'), $('dl-events')];
   buttons.forEach(b => { b.disabled = true; });
   const prog = $('tprog'); prog.hidden = false; prog.value = 0;

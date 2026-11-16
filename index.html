@@ -32,11 +32,6 @@
   <div id="alert" hidden></div>
 </section>
 
-<section id="login" hidden>
-  <label>PIN zum Freischalten der Tasten <input id="loginpin" type="password" autocomplete="off"></label>
-  <button id="loginbtn" class="primary">Anmelden</button>
-</section>
-
 <main id="pad">
   <button class="key" data-bit="0"><svg><use href="#i-plus"/></svg><svg><use href="#i-left"/></svg><span>Links ein</span></button>
   <button class="key" data-bit="2"><svg><use href="#i-plus"/></svg><svg><use href="#i-right"/></svg><span>Rechts ein</span></button>
@@ -56,11 +51,6 @@
   <button id="update">Update installieren</button>
   <progress id="prog" value="0" max="100" hidden></progress>
   <p id="fw-msg"></p>
-  <details>
-    <summary>PIN ändern</summary>
-    <label>Neue PIN (4–16 Zeichen) <input id="newpin" type="password" autocomplete="off"></label>
-    <button id="setpin">PIN ändern</button>
-  </details>
 </details>
 
 <details id="diag">
