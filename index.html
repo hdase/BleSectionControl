@@ -48,7 +48,11 @@
 <details id="fw">
   <summary>Firmware</summary>
   <p>Installiert: <b id="fw-ver">–</b></p>
-  <label>Firmware-Datei <input id="file" type="file" accept=".bin"></label>
+  <button id="fw-check">Nach Update suchen</button>
+  <button id="fw-fetch" hidden>Firmware laden</button>
+  <button id="fw-install" hidden>Installieren</button>
+  <p id="fw-online-msg"></p>
+  <label>Firmware-Datei (manuell) <input id="file" type="file" accept=".bin"></label>
   <button id="update">Update installieren</button>
   <progress id="prog" value="0" max="100" hidden></progress>
   <p id="fw-msg"></p>

@@ -56,7 +56,8 @@ function render() {
   const usable = alive && authed && !updating && !(f & 16);
   keys.forEach(k => { k.disabled = !usable; });
   if (!usable && mask) { mask = 0; keys.forEach(k => k.classList.remove('active')); }
-  $('update').disabled = !connected || updating;
+  $("update").disabled = !connected || updating;
+  $("fw-install").disabled = !connected || updating;
   $('setpin').disabled = !connected || updating;
   $('connect').textContent = connected ? 'Trennen' : 'Verbinden';
 }
@@ -212,16 +213,14 @@ async function authenticate(pin) {
 
 const msg = t => { $('fw-msg').textContent = t; };
 
-$('update').addEventListener('click', async () => {
-  const file = $('file').files[0];
+async function runUpdate(getData) {
   const pin = currentPin;
-  if (!file) return msg('Bitte eine Firmware-Datei wählen.');
   if (!pin) return msg('Bitte zuerst oben mit der PIN anmelden.');
   const prog = $('prog');
   updating = true; updateFailed = null; mask = 0; render();
   prog.hidden = false; prog.value = 0;
   try {
-    const data = new Uint8Array(await file.arrayBuffer());
+    const data = await getData();
     msg('Anmelden …');
     await authenticate(pin);
     const hash = await sha256(data);
@@ -255,6 +254,12 @@ $('update').addEventListener('click', async () => {
     updating = false;
     render();
   }
+}
+
+$('update').addEventListener('click', () => {
+  const file = $('file').files[0];
+  if (!file) return msg('Bitte eine Firmware-Datei wählen.');
+  runUpdate(async () => new Uint8Array(await file.arrayBuffer()));
 });
 
 $('setpin').addEventListener('click', async () => {
@@ -273,6 +278,62 @@ $('setpin').addEventListener('click', async () => {
   } catch (e) { msg('PIN ändern fehlgeschlagen: ' + e.message); }
 });
 
+
+// ---------- Online-Update: Firmware von der App-Adresse (GitHub Pages) laden ----------
+let onlineFw = null;      // Inhalt der firmware.json, wenn neuer als installiert
+let loadedFw = null;      // geladene und geprüfte Firmware (Bytes)
+const fmsg = t => { $('fw-online-msg').textContent = t; };
+
+function verParts(v) { return String(v).split('.').map(n => parseInt(n, 10) || 0); }
+function isNewer(a, b) {
+  const x = verParts(a), y = verParts(b);
+  for (let i = 0; i < Math.max(x.length, y.length); i++) {
+    if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0);
+  }
+  return false;
+}
+const toHex = u8 => Array.from(u8, b => b.toString(16).padStart(2, '0')).join('');
+
+$('fw-check').addEventListener('click', async () => {
+  onlineFw = null; loadedFw = null;
+  $('fw-fetch').hidden = true; $('fw-install').hidden = true;
+  fmsg('Suche …');
+  try {
+    const r = await fetch('firmware/firmware.json', { cache: 'no-store' });
+    if (!r.ok) throw new Error('keine Firmware-Info gefunden (HTTP ' + r.status + ')');
+    const info = await r.json();
+    const installed = $('fw-ver').textContent;
+    if (installed === '–') { fmsg(`Veröffentlicht: ${info.version}. Zum Vergleichen zuerst mit dem ESP32 verbinden.`); return; }
+    if (!isNewer(info.version, installed)) { fmsg(`Aktuell: installiert ${installed}, veröffentlicht ${info.version}.`); return; }
+    onlineFw = info;
+    fmsg(`Update verfügbar: ${installed} → ${info.version} (${Math.round(info.size / 1024)} KB)`);
+    $('fw-fetch').hidden = false;
+    $('fw-fetch').textContent = `Firmware ${info.version} laden`;
+  } catch (e) { fmsg('Suche fehlgeschlagen: ' + e.message); }
+});
+
+$('fw-fetch').addEventListener('click', async () => {
+  if (!onlineFw) return;
+  fmsg('Lade Firmware …');
+  try {
+    const r = await fetch('firmware/' + (onlineFw.file || 'firmware.bin'), { cache: 'no-store' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = new Uint8Array(await r.arrayBuffer());
+    if (data.length !== onlineFw.size) throw new Error('Größe stimmt nicht');
+    if (toHex(await sha256(data)) !== onlineFw.sha256) throw new Error('Prüfsumme stimmt nicht');
+    loadedFw = { data, version: onlineFw.version };
+    fmsg(`Firmware ${onlineFw.version} geladen und geprüft. Sie kann jetzt auch ohne Internet installiert werden.`);
+    $('fw-fetch').hidden = true;
+    $('fw-install').hidden = false;
+    $('fw-install').textContent = `Firmware ${onlineFw.version} installieren`;
+  } catch (e) { fmsg('Laden fehlgeschlagen: ' + e.message); }
+});
+
+$('fw-install').addEventListener('click', () => {
+  if (!loadedFw) return;
+  const fw = loadedFw;
+  runUpdate(async () => fw.data);
+});
 
 // ---------- PIN-Anmeldung (Tasten und Update nur für angemeldete Handys) ----------
 function savePin(pin) {

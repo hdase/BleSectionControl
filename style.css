@@ -37,3 +37,4 @@ progress { width: 100%; }
 #diag { background: var(--card); border-radius: 12px; padding: 10px 14px; }
 #diag button { margin: 4px 6px 4px 0; }
 footer { color: var(--muted); font-size: .8rem; text-align: center; }
+#fw button { margin: 4px 6px 4px 0; }
