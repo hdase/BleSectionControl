@@ -3,6 +3,7 @@
 const uuid = n => `7b1e000${n}-5c3a-4e6f-9a1d-b1e5ec710000`;
 const SVC = uuid(1), CH_INPUT = uuid(2), CH_STATUS = uuid(3), CH_INFO = uuid(4), CH_OTA_CTRL = uuid(5), CH_OTA_DATA = uuid(6), CH_TRACE_CTRL = uuid(7), CH_TRACE_DATA = uuid(8);
 
+const DEFAULT_PIN = '123456';  // Standard-PIN der Firmware; erst bei geänderter PIN erscheint die Abfrage
 const HEARTBEAT_MS = 200;
 const STATUS_TIMEOUT_MS = 1000;
 const CHUNK = 196;  // plus 4 Byte Offset = 200 Byte pro Schreibzugriff
@@ -133,7 +134,7 @@ async function openGatt() {
   lastStatusAt = performance.now();
   try { $("fw-ver").textContent = $("fw-ver2").textContent = new TextDecoder().decode(await chInfo.readValue()); } catch (e) {}
   requestWakeLock();
-  if (currentPin) login(currentPin, true);
+  login(currentPin || DEFAULT_PIN, true);  // ohne gespeicherte PIN zuerst die Standard-PIN probieren
 }
 
 function onDisconnected() {
